@@ -25,7 +25,7 @@ WebServer::~WebServer()
     close(m_pipefd[0]);
     delete[] users;
     delete[] users_timer;
-    delete m_pool;
+//    delete m_pool;
 }
 
 void WebServer::init(int port, string user, string passWord, string databaseName, int log_write, 
@@ -97,7 +97,7 @@ void WebServer::sql_pool()
 void WebServer::thread_pool()
 {
     //线程池
-    m_pool = new threadpool<http_conn>(m_actormodel, m_connPool, m_thread_num);
+    m_pool.reset(new threadpool<http_conn>(m_actormodel, m_connPool, m_thread_num));
 }
 
 void WebServer::eventListen()
@@ -316,7 +316,7 @@ void WebServer::dealwithread(int sockfd)
         }
 
         //若监测到读事件，将该事件放入请求队列
-        m_pool->append(users + sockfd, 0);
+        m_pool.get()->append(users + sockfd, 0);
 
         while (true)
         {
@@ -340,7 +340,7 @@ void WebServer::dealwithread(int sockfd)
             LOG_INFO("deal with the client(%s)", inet_ntoa(users[sockfd].get_address()->sin_addr));
 
             //若监测到读事件，将该事件放入请求队列
-            m_pool->append_p(users + sockfd);
+            m_pool.get()->append_p(users + sockfd);
             
             // 若有数据传输，则将定时器往后延迟3个单位，对其在链表上的位置进行调整
             if (timer)
@@ -367,7 +367,7 @@ void WebServer::dealwithwrite(int sockfd)
             adjust_timer(timer);
         }
 
-        m_pool->append(users + sockfd, 1);
+        m_pool.get()->append(users + sockfd, 1);
 
         while (true)
         {
